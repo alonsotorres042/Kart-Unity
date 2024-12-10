@@ -6,7 +6,7 @@ using System.Net.Sockets;
 using UnityEngine;
 using UnityEngine.UI;
 using Slider = UnityEngine.UI.Slider;
-
+using TMPro;
 public class UDPManager : MonoBehaviour
 {
     IPEndPoint remoteEndPoint;
@@ -15,13 +15,13 @@ public class UDPManager : MonoBehaviour
 
     private string IP;  // define in init
     public int port;  // define in init
-    public Text engineA;
+    public TextMeshPro engineA;
     public Text engineAHex;
     public Slider sliderA;
-    public Text engineB;
+    public TextMeshPro engineB;
     public Text engineBHex;
     public Slider sliderB;
-    public Text engineC;
+    public TextMeshPro engineC;
     public Text engineCHex;
     public Slider sliderC;
 
@@ -36,11 +36,53 @@ public class UDPManager : MonoBehaviour
     public float A = 0, B = 0, C = 0, longg;
 
     public Transform vehicle;
+    public Vector2 axis;
+    private Vector2 previousAxis = Vector2.zero;
 
     // start from unity3d
     public void Start()
     {
         init();
+    }
+    void Update()
+    {
+        // Obtenemos la rotación del vehículo
+        Vector3 rotation = vehicle.transform.eulerAngles;
+
+        // Normalizamos las rotaciones en el rango [-180, 180]
+        rotation.x = NormalizeAngle(rotation.x);
+        rotation.z = NormalizeAngle(rotation.z);
+
+        // Determinamos el valor del eje basado en la rotación
+        float xValue = Mathf.Clamp(rotation.x / 90f, -1f, 1f); // Escalamos y limitamos entre -1 y 1
+        float zValue = Mathf.Clamp(rotation.z / 90f, -1f, 1f); // Escalamos y limitamos entre -1 y 1
+
+        Vector2 newAxis;
+        // Si predomina X, representamos en el eje X, si no, en el Z
+        if (Mathf.Abs(rotation.x) > Mathf.Abs(rotation.z))
+        {
+            newAxis = new Vector2(Mathf.Sign(xValue), 0); // Dirección en el eje X (-1 o 1)
+        }
+        else
+        {
+            newAxis = new Vector2(0, Mathf.Sign(zValue)); // Dirección en el eje Z (-1 o 1)
+        }
+
+        // Verificamos si el cambio en el axis es significativo
+        if (Vector2.Distance(newAxis, previousAxis) >= 0.15f)
+        {
+            axis = newAxis;
+            previousAxis = newAxis;
+
+            // Llamamos a la función CalcularRotacion
+            CalcularRotacion(axis);
+        }
+    }
+    private float NormalizeAngle(float angle)
+    {
+        angle %= 360;
+        if (angle > 180) angle -= 360;
+        return angle;
     }
     public void init()
     {
@@ -71,9 +113,9 @@ public class UDPManager : MonoBehaviour
 
         mUDPDATA.mAppDataField.PortOut = "12345678";
 
-        A = 125;
-        B = 125;
-        C = 125;
+        A = 100;
+        B = 100;
+        C = 100;
 
         sliderA.value = A;
         sliderB.value = B;
@@ -121,6 +163,25 @@ public class UDPManager : MonoBehaviour
         mUDPDATA.mAppDataField.RelaTime = "00000064";
 
     }
+    public void SetPositionEngine()
+    {
+        mUDPDATA.mAppDataField.RelaTime = "00001F40";
+
+        string HexA = DecToHexMove(A);
+        string HexB = DecToHexMove(B);
+        string HexC = DecToHexMove(C);
+
+        mUDPDATA.mAppDataField.PlayMotorC = HexC;
+        mUDPDATA.mAppDataField.PlayMotorA = HexA;
+        mUDPDATA.mAppDataField.PlayMotorB = HexB;
+
+        //Data.text = "Data: " + mUDPDATA.GetToString();
+
+        sendString(mUDPDATA.GetToString());
+
+        mUDPDATA.mAppDataField.RelaTime = "00000064";
+
+    }
 
     IEnumerator UpMovePlatform(float wait)
     {
@@ -131,46 +192,55 @@ public class UDPManager : MonoBehaviour
         active = true;
     }
 
-    void CalcularRotacion()
+    void CalcularRotacion(Vector2 acsis)
     {
 
-        // TIENES QUE SEGUIR PROGRAMANDO ACAAAAAAAAAAAAAA
-
-
+        if (A >= 0 && A <= 200 && B >= 0 && B <= 200 && C >= 0 && C <= 200)
+        {
+            if (axis == new Vector2(1, 0))
+            {
+                B += 1f; // Aumenta B
+                C += 1f; // Aumenta C
+                A -= 1f; // Disminuye A
+            }
+        }
     }
 
     void FixedUpdate()
     {
-        if (active)
-        {
 
-            CalcularRotacion();
+        //if (active)
+        //{
+        //    sliderA.value = A;
+        //    sliderB.value = B;
+        //    sliderC.value = C;
 
-            sliderA.value = A;
-            sliderB.value = B;
-            sliderC.value = C;
+        //    string HexA = DecToHexMove(A);
+        //    string HexB = DecToHexMove(B);
+        //    string HexC = DecToHexMove(C);
 
-            string HexA = DecToHexMove(A);
-            string HexB = DecToHexMove(B);
-            string HexC = DecToHexMove(C);
+        //    engineAHex.text = "Engine A: " + HexA;
+        //    engineBHex.text = "Engine B: " + HexB;
+        //    engineCHex.text = "Engine C: " + HexC;
 
-            engineAHex.text = "Engine A: " + HexA;
-            engineBHex.text = "Engine B: " + HexB;
-            engineCHex.text = "Engine C: " + HexC;
-
-            mUDPDATA.mAppDataField.PlayMotorC = HexC;
-            mUDPDATA.mAppDataField.PlayMotorA = HexA;
-            mUDPDATA.mAppDataField.PlayMotorB = HexB;
+        //    mUDPDATA.mAppDataField.PlayMotorC = HexC;
+        //    mUDPDATA.mAppDataField.PlayMotorA = HexA;
+        //    mUDPDATA.mAppDataField.PlayMotorB = HexB;
 
 
-            engineA.text = ((int)sliderA.value).ToString();
-            engineB.text = ((int)sliderB.value).ToString();
-            engineC.text = ((int)sliderC.value).ToString();
+        //    engineA.text = ((int)A).ToString();
+        //    engineB.text = ((int)B).ToString();
+        //    engineC.text = ((int)C).ToString();
 
-            Data.text = "Data: " + mUDPDATA.GetToString();
+        //    Data.text = "Data: " + mUDPDATA.GetToString();
 
-            sendString(mUDPDATA.GetToString());
-        }
+        //    //sendString(mUDPDATA.GetToString());
+        //}
+        //CalcularRotacion();
+        //engineA.text = ((int)A).ToString();
+        //engineB.text = ((int)B).ToString();
+        //engineC.text = ((int)C).ToString();
+        //SetPositionEngine();
     }
 
     void OnApplicationQuit()
@@ -232,39 +302,19 @@ public class UDPManager : MonoBehaviour
 
     private void OnDrawGizmos()
     {
+        //#region Axis WordSpace
+        //Gizmos.color = Color.blue;
+        //Gizmos.DrawSphere(Vector3.forward * longg, 0.5f);
+        //Gizmos.DrawLine(Vector3.zero, Vector3.forward * longg);
 
-        // rotate left or Right
-        Vector3 FG1 = vehicle.position + Vector3.forward * longg;
-        Vector3 FG2 = vehicle.position + vehicle.forward * longg;
-        Gizmos.color = Color.black;
-        Gizmos.DrawLine(FG1, FG2);
-        float d = (FG1 - FG2).magnitude;
-        float dMax = 5;
-        float dN = d / dMax;
-        float Increment = dN * 100;
-        Vector3 cross = Vector3.Cross(vehicle.forward, Vector3.forward);
-        if (cross.x < 0)
-            Increment *= -1;
-        float FinalValue = 100 + Increment;
-        B = Mathf.Lerp(B, FinalValue, Time.deltaTime * 20f);
-        B = Mathf.Clamp(B, 0, 200);
+        //Gizmos.color = Color.red;
+        //Gizmos.DrawSphere(Vector3.right * longg, 0.5f);
+        //Gizmos.DrawLine(Vector3.zero, Vector3.right * longg);
 
-        Debug.Log(B);
-
-        #region Axis WordSpace
-        Gizmos.color = Color.blue;
-        Gizmos.DrawSphere(Vector3.forward * longg, 0.5f);
-        Gizmos.DrawLine(Vector3.zero, Vector3.forward * longg);
-
-        Gizmos.color = Color.red;
-        Gizmos.DrawSphere(Vector3.right * longg, 0.5f);
-        Gizmos.DrawLine(Vector3.zero, Vector3.right * longg);
-
-        Gizmos.color = Color.green;
-        Gizmos.DrawSphere(Vector3.up * longg, 0.5f);
-        Gizmos.DrawLine(Vector3.zero, Vector3.up * longg);
-        #endregion
-
+        //Gizmos.color = Color.green;
+        //Gizmos.DrawSphere(Vector3.up * longg, 0.5f);
+        //Gizmos.DrawLine(Vector3.zero, Vector3.up * longg);
+        //#endregion
 
         #region Axis Vechicle
         Gizmos.color = Color.blue;
@@ -279,8 +329,5 @@ public class UDPManager : MonoBehaviour
         Gizmos.DrawSphere(vehicle.position + vehicle.up * longg, 0.5f);
         Gizmos.DrawLine(vehicle.position, vehicle.position + vehicle.up * longg);
         #endregion
-
-
     }
-
 }

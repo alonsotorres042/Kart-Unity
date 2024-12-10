@@ -53,45 +53,41 @@ public class PlatformSimulator : MonoBehaviour
         // Sincronizar MotorA
         ControlMotorA(MotorA, vehicleRotation.x);
 
-        // Sincronizar MotorB
-        ControlMotorB(MotorB, vehicleRotation.y);
+        //// Sincronizar MotorB
+        //ControlMotorB(MotorB, vehicleRotation.y);
 
         // Sincronizar MotorC
-        ControlMotorC(MotorC, vehicleRotation.z);
+       ControlMotorC(MotorC, vehicleRotation.z);
     }
 
     void ControlMotorA(Transform motorA, float rotationValue)
     {
         // Clampear la rotación para MotorA
         float clampedRotationA = Mathf.Clamp(rotationValue, -limit, limit);
-        motorA.localEulerAngles = new Vector3(0f, 0f, clampedRotationA);
+        motorA.localEulerAngles = new Vector3(0f, 0f, -clampedRotationA);
 
         // Sincronizar inversamente los otros dos motores
-        float inverseRotation = -clampedRotationA;
-        MotorB.localEulerAngles = new Vector3(0f, 0f, inverseRotation);
-        MotorC.localEulerAngles = new Vector3(0f, 0f, inverseRotation);
+        float inverseRotation = clampedRotationA;
+        MotorB.localEulerAngles = new Vector3(0f, 0f, -inverseRotation);
+        MotorC.localEulerAngles = new Vector3(0f, 0f, -inverseRotation);
     }
 
     void ControlMotorB(Transform motorB, float rotationValue)
     {
         // Clampear la rotación para MotorB
         float clampedRotationB = Mathf.Clamp(rotationValue, -limit, limit);
-        motorB.localEulerAngles = new Vector3(0f, 0f, clampedRotationB);
+        motorB.localEulerAngles = new Vector3(0f, 0f, -clampedRotationB);
 
-        //// Sincronizar inversamente MotorC
-        //float inverseRotationC = -clampedRotationB;
-        //MotorC.localEulerAngles = new Vector3(0f, 0f, inverseRotationC);
+        //Sincronizar inversamente MotorC
+        float inverseRotationC = -clampedRotationB;
+        MotorC.localEulerAngles = new Vector3(0f, 0f, inverseRotationC);
     }
 
     void ControlMotorC(Transform motorC, float rotationValue)
     {
         // Clampear la rotación para MotorC
-        float clampedRotationC = Mathf.Clamp(rotationValue, -limit, limit);
-        motorC.localEulerAngles = new Vector3(0f, 0f, clampedRotationC);
-
-        //// Sincronizar inversamente MotorC
-        float inverseRotationB = -clampedRotationC;
-        MotorC.localEulerAngles = new Vector3(0f, 0f, inverseRotationB);
+        float clampedRotationC = Mathf.Clamp(-rotationValue, -limit, limit);
+        motorC.localEulerAngles = new Vector3(0f, 0f, -clampedRotationC);
 
         // NOTA: MotorC no afecta a los demás motores.
     }
