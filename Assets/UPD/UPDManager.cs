@@ -7,25 +7,25 @@ using UnityEngine;
 using UnityEngine.UI;
 using Slider = UnityEngine.UI.Slider;
 using TMPro;
+using Unity.VisualScripting;
 public class UDPManager : MonoBehaviour
 {
     IPEndPoint remoteEndPoint;
     UDPDATA mUDPDATA = new UDPDATA();
 
-
     private string IP;  // define in init
     public int port;  // define in init
     public TextMeshPro engineA;
-    public Text engineAHex;
+    public TextMeshProUGUI engineAHex;
     public Slider sliderA;
     public TextMeshPro engineB;
-    public Text engineBHex;
+    public TextMeshProUGUI engineBHex;
     public Slider sliderB;
     public TextMeshPro engineC;
-    public Text engineCHex;
+    public TextMeshProUGUI engineCHex;
     public Slider sliderC;
 
-    public Text Data;
+    public TextMeshProUGUI Data;
 
     UdpClient client;
 
@@ -36,53 +36,41 @@ public class UDPManager : MonoBehaviour
     public float A = 0, B = 0, C = 0, longg;
 
     public Transform vehicle;
-    public Vector2 axis;
-    private Vector2 previousAxis = Vector2.zero;
 
     // start from unity3d
     public void Start()
     {
         init();
     }
-    void Update()
+    void FixedUpdate()
     {
-        // Obtenemos la rotación del vehículo
-        Vector3 rotation = vehicle.transform.eulerAngles;
-
-        // Normalizamos las rotaciones en el rango [-180, 180]
-        rotation.x = NormalizeAngle(rotation.x);
-        rotation.z = NormalizeAngle(rotation.z);
-
-        // Determinamos el valor del eje basado en la rotación
-        float xValue = Mathf.Clamp(rotation.x / 90f, -1f, 1f); // Escalamos y limitamos entre -1 y 1
-        float zValue = Mathf.Clamp(rotation.z / 90f, -1f, 1f); // Escalamos y limitamos entre -1 y 1
-
-        Vector2 newAxis;
-        // Si predomina X, representamos en el eje X, si no, en el Z
-        if (Mathf.Abs(rotation.x) > Mathf.Abs(rotation.z))
+        if (active)
         {
-            newAxis = new Vector2(Mathf.Sign(xValue), 0); // Dirección en el eje X (-1 o 1)
-        }
-        else
-        {
-            newAxis = new Vector2(0, Mathf.Sign(zValue)); // Dirección en el eje Z (-1 o 1)
-        }
+            sliderA.value = A;
+            sliderB.value = B;
+            sliderC.value = C;
 
-        // Verificamos si el cambio en el axis es significativo
-        if (Vector2.Distance(newAxis, previousAxis) >= 0.15f)
-        {
-            axis = newAxis;
-            previousAxis = newAxis;
+            string HexA = DecToHexMove(A);
+            string HexB = DecToHexMove(B);
+            string HexC = DecToHexMove(C);
 
-            // Llamamos a la función CalcularRotacion
-            CalcularRotacion(axis);
+            engineAHex.text = "Engine A: " + HexA;
+            engineBHex.text = "Engine B: " + HexB;
+            engineCHex.text = "Engine C: " + HexC;
+
+            mUDPDATA.mAppDataField.PlayMotorC = HexC;
+            mUDPDATA.mAppDataField.PlayMotorA = HexA;
+            mUDPDATA.mAppDataField.PlayMotorB = HexB;
+
+            engineA.text = ((int)A).ToString();
+            engineB.text = ((int)B).ToString();
+            engineC.text = ((int)C).ToString();
+
+            Data.text = "Data: " + mUDPDATA.GetToString();
+
+            sendString(mUDPDATA.GetToString());
         }
-    }
-    private float NormalizeAngle(float angle)
-    {
-        angle %= 360;
-        if (angle > 180) angle -= 360;
-        return angle;
+        CalcularRotacion();
     }
     public void init()
     {
@@ -144,11 +132,6 @@ public class UDPManager : MonoBehaviour
 
         StartCoroutine(UpMovePlatform(3));
     }
-    public void ActiveSend()
-    {
-        active = true;
-
-    }
     public void ResertPositionEngine()
     {
 
@@ -163,112 +146,53 @@ public class UDPManager : MonoBehaviour
         mUDPDATA.mAppDataField.RelaTime = "00000064";
 
     }
-    public void SetPositionEngine()
+    //private void CalcularRotacion()
+    //{
+    //    // Obtenemos la rotación del vehículo
+    //    Vector3 rotation = vehicle.transform.eulerAngles;
+
+    //    // Normalizamos las rotaciones en el rango [-180, 180]
+    //    rotation.x = NormalizeAngle(rotation.x);
+    //    rotation.z = NormalizeAngle(rotation.z);
+
+    //    // A está determinado por la rotación en X
+    //    A = Mathf.Clamp(100 + rotation.x, 0, 200);
+
+    //    // B y C están determinados por la rotación en Z
+    //    B = Mathf.Clamp(100 - rotation.z, 0, 200);
+    //    C = Mathf.Clamp(100 + rotation.z, 0, 200);
+    //}
+    private void CalcularRotacion()
     {
-        mUDPDATA.mAppDataField.RelaTime = "00001F40";
+        // Obtenemos la rotación del vehículo
+        Vector3 rotation = vehicle.transform.eulerAngles;
 
-        string HexA = DecToHexMove(A);
-        string HexB = DecToHexMove(B);
-        string HexC = DecToHexMove(C);
+        // Normalizamos las rotaciones en el rango [-180, 180]
+        rotation.x = NormalizeAngle(rotation.x);
+        rotation.z = NormalizeAngle(rotation.z);
 
-        mUDPDATA.mAppDataField.PlayMotorC = HexC;
-        mUDPDATA.mAppDataField.PlayMotorA = HexA;
-        mUDPDATA.mAppDataField.PlayMotorB = HexB;
+        // A está determinado por la rotación en X
+        A = Mathf.Clamp(100 + rotation.x, 0, 200);
 
-        //Data.text = "Data: " + mUDPDATA.GetToString();
+        // B y C están determinados por la rotación en Z
+        B = Mathf.Clamp(100 - rotation.z, 0, 200);
+        C = Mathf.Clamp(100 + rotation.z, 0, 200);
 
-        sendString(mUDPDATA.GetToString());
-
-        mUDPDATA.mAppDataField.RelaTime = "00000064";
-
+        // Ajustamos B y C según el valor de A
+        float diffA = A - 100;  // Calculamos la diferencia de A respecto al valor central 100
+        B = Mathf.Clamp(B - diffA, 0, 200);  // Restamos la diferencia de A a B
+        C = Mathf.Clamp(C - diffA, 0, 200);  // Restamos la diferencia de A a C
     }
-
-    IEnumerator UpMovePlatform(float wait)
+    public void ActiveSend()
     {
-        active = false;
-
-        yield return new WaitForSeconds(3f);
-
         active = true;
     }
-
-    void CalcularRotacion(Vector2 acsis)
+    private float NormalizeAngle(float angle)
     {
-
-        if (A >= 0 && A <= 200 && B >= 0 && B <= 200 && C >= 0 && C <= 200)
-        {
-            if (axis == new Vector2(1, 0))
-            {
-                B += 1f; // Aumenta B
-                C += 1f; // Aumenta C
-                A -= 1f; // Disminuye A
-            }
-        }
+        angle %= 360;
+        if (angle > 180) angle -= 360;
+        return angle;
     }
-
-    void FixedUpdate()
-    {
-
-        //if (active)
-        //{
-        //    sliderA.value = A;
-        //    sliderB.value = B;
-        //    sliderC.value = C;
-
-        //    string HexA = DecToHexMove(A);
-        //    string HexB = DecToHexMove(B);
-        //    string HexC = DecToHexMove(C);
-
-        //    engineAHex.text = "Engine A: " + HexA;
-        //    engineBHex.text = "Engine B: " + HexB;
-        //    engineCHex.text = "Engine C: " + HexC;
-
-        //    mUDPDATA.mAppDataField.PlayMotorC = HexC;
-        //    mUDPDATA.mAppDataField.PlayMotorA = HexA;
-        //    mUDPDATA.mAppDataField.PlayMotorB = HexB;
-
-
-        //    engineA.text = ((int)A).ToString();
-        //    engineB.text = ((int)B).ToString();
-        //    engineC.text = ((int)C).ToString();
-
-        //    Data.text = "Data: " + mUDPDATA.GetToString();
-
-        //    //sendString(mUDPDATA.GetToString());
-        //}
-        //CalcularRotacion();
-        //engineA.text = ((int)A).ToString();
-        //engineB.text = ((int)B).ToString();
-        //engineC.text = ((int)C).ToString();
-        //SetPositionEngine();
-    }
-
-    void OnApplicationQuit()
-    {
-
-        ResertPositionEngine();
-
-
-
-        if (client != null)
-            client.Close();
-        Application.Quit();
-    }
-
-    byte[] StringToByteArray(string hex)
-    {
-        return Enumerable.Range(0, hex.Length)
-                         .Where(x => x % 2 == 0)
-                         .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
-                         .ToArray();
-    }
-
-    string DecToHexMove(float num)
-    {
-        int d = (int)((num / 5f) * 10000f);
-        return "000" + d.ToString("X");
-    }
-
     private void sendString(string message)
     {
 
@@ -292,30 +216,45 @@ public class UDPManager : MonoBehaviour
             print(err.ToString());
         }
     }
+    byte[] StringToByteArray(string hex)
+    {
+        return Enumerable.Range(0, hex.Length)
+                         .Where(x => x % 2 == 0)
+                         .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
+                         .ToArray();
+    }
+    string DecToHexMove(float num)
+    {
+        int d = (int)((num / 5f) * 10000f);
+        return "000" + d.ToString("X");
+    }
+    void OnApplicationQuit()
+    {
 
+        ResertPositionEngine();
+
+
+
+        if (client != null)
+            client.Close();
+        Application.Quit();
+    }
     void OnDisable()
     {
 
         if (client != null)
             client.Close();
     }
+    IEnumerator UpMovePlatform(float wait)
+    {
+        active = false;
 
+        yield return new WaitForSeconds(3f);
+
+        active = true;
+    }
     private void OnDrawGizmos()
     {
-        //#region Axis WordSpace
-        //Gizmos.color = Color.blue;
-        //Gizmos.DrawSphere(Vector3.forward * longg, 0.5f);
-        //Gizmos.DrawLine(Vector3.zero, Vector3.forward * longg);
-
-        //Gizmos.color = Color.red;
-        //Gizmos.DrawSphere(Vector3.right * longg, 0.5f);
-        //Gizmos.DrawLine(Vector3.zero, Vector3.right * longg);
-
-        //Gizmos.color = Color.green;
-        //Gizmos.DrawSphere(Vector3.up * longg, 0.5f);
-        //Gizmos.DrawLine(Vector3.zero, Vector3.up * longg);
-        //#endregion
-
         #region Axis Vechicle
         Gizmos.color = Color.blue;
         Gizmos.DrawSphere(vehicle.position + vehicle.forward * longg, 0.5f);
